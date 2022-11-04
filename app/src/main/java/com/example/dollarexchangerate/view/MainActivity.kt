@@ -18,6 +18,7 @@ import com.example.dollarexchangerate.domain.repository.RepositoryImpl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
 import java.util.*
 import javax.inject.Inject
 
@@ -83,9 +84,20 @@ class MainActivity : AppCompatActivity() {
         createNotificationChannel()
         lifecycleScope.launch {
             withContext(Dispatchers.IO) {
-                //Получить данные за сегодняшний день, сравнить
-                //если курс изменился, отправить пуш
-                //sendPush()
+                val rate = repositoryDataBase.getRate()
+                val calendarFrom = Calendar.getInstance()
+                calendarFrom.time = Date()
+                val calendarBefore = Calendar.getInstance()
+                calendarBefore.time = Date()
+                val simpleFormat = SimpleDateFormat("dd/MM/yyyy")
+                calendarFrom.add(Calendar.DATE, -30)
+                val list = repositoryImpl.getDollarExchangeRate(
+                    simpleFormat.format(calendarFrom.time),
+                    simpleFormat.format(calendarBefore.time)
+                )
+                if (list.rateList?.last()?.value != rate.value) {
+                    sendPush()
+                }
             }
         }
         registerReceiver(myBroadcastReceiver, IntentFilter("com.example.dollarexchangerate"))
@@ -114,8 +126,4 @@ class MainActivity : AppCompatActivity() {
         notifManger.notify(NOTIFICATION_ID, notif)
     }
 
-    override fun onDestroy() {
-        unregisterReceiver(myBroadcastReceiver)
-        super.onDestroy()
-    }
 }
